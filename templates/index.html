@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KUISI - Kuis Interaktif</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <div class="main-container">
+        <div id="screen-home" class="screen">
+            <h1 class="logo">KUISI</h1>
+            <div class="card">
+                <h3>Masuk ke Game</h3>
+                <input type="number" id="input-pin" placeholder="Masukkan PIN Kuis">
+                <input type="text" id="input-name" placeholder="Nama Kamu">
+                <button class="btn-primary" onclick="joinQuiz()">MASUK</button>
+            </div>
+            <div class="divider">ATAU</div>
+            <button class="btn-secondary" onclick="showScreen('screen-studio')">Buat Kuis Baru (Host)</button>
+        </div>
+
+        <div id="screen-studio" class="screen hidden">
+            <h2>Studio Pembuatan Kuis</h2>
+            <div class="card">
+                <input type="text" id="quiz-title" placeholder="Judul Kuis">
+
+                <div class="settings-row">
+                    <div class="setting-group">
+                        <label for="time-limit-setting">Batas Waktu / Soal</label>
+                        <select id="time-limit-setting">
+                            <option value="10">10 Detik</option>
+                            <option value="15">15 Detik</option>
+                            <option value="20" selected>20 Detik</option>
+                            <option value="30">30 Detik</option>
+                            <option value="60">60 Detik</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="max-players-setting">Maks. Pemain (1-36)</label>
+                        <input type="number" id="max-players-setting" min="1" max="36" value="36" placeholder="1 - 36">
+                    </div>
+                </div>
+
+                <div id="question-builder">
+                    <input type="text" id="q-text" placeholder="Ketik Pertanyaan...">
+
+                    <div class="image-upload-group">
+                        <label for="q-image">Gambar Soal (Opsional):</label>
+                        <input type="file" id="q-image" accept="image/*">
+                    </div>
+
+                    <input type="text" id="opt-0" placeholder="Pilihan A">
+                    <input type="text" id="opt-1" placeholder="Pilihan B">
+                    <input type="text" id="opt-2" placeholder="Pilihan C">
+                    <input type="text" id="opt-3" placeholder="Pilihan D">
+
+                    <select id="correct-opt">
+                        <option value="0">Jawaban Benar: Pilihan A</option>
+                        <option value="1">Jawaban Benar: Pilihan B</option>
+                        <option value="2">Jawaban Benar: Pilihan C</option>
+                        <option value="3">Jawaban Benar: Pilihan D</option>
+                    </select>
+                    <button class="btn-outline" onclick="addQuestion()">+ Tambah Soal Ini</button>
+                </div>
+
+                <div class="question-list-info">
+                    <p>Total Soal Tersimpan: <span id="q-count">0</span></p>
+                </div>
+                <button class="btn-primary" onclick="createQuiz()">Selesai & Buka Ruangan (Lobby)</button>
+                <button class="btn-danger" onclick="showScreen('screen-home')" style="margin-top: 10px;">Batal</button>
+            </div>
+        </div>
+
+        <div id="screen-lobby" class="screen hidden text-center">
+            <h2 id="lobby-title">Menunggu Pemain...</h2>
+            <div id="host-pin-area" class="hidden">
+                <p>Bagikan PIN ini ke pemain:</p>
+                <h1 class="pin-display" id="display-pin">0000</h1>
+                <button class="btn-primary" onclick="startQuiz()">Mulai Kuis Sekarang!</button>
+            </div>
+            <div class="card" style="margin-top: 20px;">
+                <h3>Pemain Bergabung:</h3>
+                <div id="player-list" class="player-grid"></div>
+            </div>
+        </div>
+
+        <div id="screen-quiz" class="screen hidden">
+            <div class="quiz-header">
+                <span id="player-score-display">Skor: 0</span>
+                <span id="timer-display" style="color: #ff3b30; font-weight: 900; font-size: 22px;">20s</span>
+                <span id="question-counter">Soal 1/x</span>
+            </div>
+            <div class="card">
+                <img id="question-image" class="hidden question-img" src="" alt="Gambar Soal">
+                <h2 id="question-text">Pertanyaan...</h2>
+                <div class="options-grid">
+                    <button class="btn-option opt-a" onclick="submitAnswer(0)" id="btn-opt-0">Opsi A</button>
+                    <button class="btn-option opt-b" onclick="submitAnswer(1)" id="btn-opt-1">Opsi B</button>
+                    <button class="btn-option opt-c" onclick="submitAnswer(2)" id="btn-opt-2">Opsi C</button>
+                    <button class="btn-option opt-d" onclick="submitAnswer(3)" id="btn-opt-3">Opsi D</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="screen-finish" class="screen hidden text-center">
+            <div class="card">
+                <h2>Kuis Selesai!</h2>
+                <h1 id="final-score" style="color: #00c985; font-size: 48px;">0</h1>
+                <p>Menunggu pemain lain selesai...</p>
+                <button class="btn-primary" onclick="viewLiveLeaderboard()">Lihat Scoreboard</button>
+            </div>
+        </div>
+
+        <div id="screen-host-view" class="screen hidden text-center">
+            <h2 id="leaderboard-title">Klasemen Langsung (Live)</h2>
+            <p id="leaderboard-subtitle">Pemain sedang mengerjakan soal...</p>
+            <div class="card">
+                <div id="podium-area" class="hidden"></div>
+                <ul id="live-leaderboard" class="leaderboard-list"></ul>
+            </div>
+            <button id="btn-end-session" class="btn-danger hidden" onclick="location.reload()" style="margin-top: 20px;">Akhiri Sesi & Kembali</button>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
