@@ -6,7 +6,15 @@ import string
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "rahasia_kuisi_123"
 
-socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=10 * 1024 * 1024)
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    max_http_buffer_size=10 * 1024 * 1024,
+    async_mode="threading",
+    allow_upgrades=False,
+    ping_interval=10,
+    ping_timeout=20
+)
 
 active_games = {}
 
